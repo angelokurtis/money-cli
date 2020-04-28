@@ -2,3 +2,4 @@
 *.json
 *.log
 .idea/
+pkg/app/wire_gen.go

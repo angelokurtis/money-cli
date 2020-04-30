@@ -4,21 +4,23 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/angelokurtis/money/pkg/spreadsheet/classification"
 	"github.com/pkg/errors"
 )
 
 type Transaction struct {
-	Date        string
+	Date        time.Time
 	Account     string
 	Description string
 	Value       float64
 	Type        string
 	Updated     bool
+	TypeAddress string
 }
 
-func NewTransaction(row []interface{}) (*Transaction, error) {
+func NewTransaction(index int, row []interface{}) (*Transaction, error) {
 	var t1 string
 	var t2 string
 	var updated bool
@@ -35,8 +37,13 @@ func NewTransaction(row []interface{}) (*Transaction, error) {
 		return nil, err
 	}
 
+	date, err := time.Parse("02/01/2006 15:04:05", fmt.Sprintf("%s", row[0]))
+	if err != nil {
+		return nil, err
+	}
+
 	return &Transaction{
-		Date:        fmt.Sprintf("%s", row[0]),
+		Date:        date,
 		Account:     fmt.Sprintf("%s", row[1]),
 		Description: desc,
 		Value:       val,
@@ -46,12 +53,29 @@ func NewTransaction(row []interface{}) (*Transaction, error) {
 			}
 			return t1
 		}(),
-		Updated: updated,
+		Updated:     updated,
+		TypeAddress: fmt.Sprintf("Extratos!J%d", index),
 	}, nil
 }
 
 func (t *Transaction) Typed() bool {
 	return t.Type != ""
+}
+
+func (t *Transaction) Profit() bool {
+	switch t.Type {
+	case "Salário", "Impostos", "Hora Extra", "Outros Descontos", "Outras Receitas":
+		return true
+	}
+	return false
+}
+
+func (t *Transaction) Debit() bool {
+	switch t.Type {
+	case "Bancários", "Serviços", "Casa", "Extras", "Transporte", "Veículos", "Diversos", "":
+		return true
+	}
+	return false
 }
 
 func NewValue(val string) (float64, error) {

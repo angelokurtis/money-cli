@@ -7,6 +7,10 @@ import (
 
 	"github.com/angelokurtis/money/internal/log"
 	"github.com/pkg/errors"
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/plotutil"
+	"gonum.org/v1/plot/vg"
 	"google.golang.org/api/sheets/v4"
 )
 
@@ -41,13 +45,67 @@ func (c *Service) Classify() error {
 }
 
 func (c *Service) PlotAnalysis() error {
-	balances, err := c.balances()
+	b, err := c.balances()
 	if err != nil {
 		return err
 	}
-	for _, current := range balances {
-		log.Debugf("%s", current.String())
+	balances := make([]*Balance, 0, 0)
+	for _, current := range b {
+		if current.Date.After(time.Date(2018, 12, 01, 0, 0, 0, 0, time.UTC)) {
+			balances = append(balances, current)
+		}
 	}
+
+	profit := make(plotter.Values, 0, len(balances))
+	debit := make(plotter.Values, 0, len(balances))
+	names := make([]string, 0, len(balances))
+	for _, balance := range balances {
+		p := balance.Profit / 1000
+		if p < 0 {
+			p = 0
+		}
+		profit = append(profit, p)
+		d := balance.Debit / 1000
+		if d > 0 {
+			d = 0
+		}
+		debit = append(debit, d*-1)
+		names = append(names, balance.Date.Format("Jan/2006"))
+	}
+
+	p, err := plot.New()
+	if err != nil {
+		return err
+	}
+	p.Title.Text = "Balanço mensal"
+	p.Y.Label.Text = "R$ (x1000)"
+
+	w := vg.Points(20)
+
+	barsA, err := plotter.NewBarChart(profit, w)
+	if err != nil {
+		return err
+	}
+	barsA.LineStyle.Width = vg.Length(0)
+	barsA.Color = plotutil.Color(1)
+	barsA.Offset = -w
+
+	barsB, err := plotter.NewBarChart(debit, w)
+	if err != nil {
+		return err
+	}
+	barsB.LineStyle.Width = vg.Length(0)
+	barsB.Color = plotutil.Color(0)
+
+	p.Add(barsA, barsB)
+	p.Legend.Add("Créditos", barsA)
+	p.Legend.Add("Débitos", barsB)
+	p.Legend.Top = true
+	p.NominalX(names...)
+	if err := p.Save(3*5*vg.Inch, 3*3*vg.Inch, "balance.png"); err != nil {
+		return err
+	}
+
 	return nil
 }
 

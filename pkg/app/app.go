@@ -7,6 +7,7 @@ import (
 	"github.com/angelokurtis/money/internal/gmail"
 	"github.com/angelokurtis/money/internal/gsheets"
 	"github.com/angelokurtis/money/internal/http"
+	"github.com/angelokurtis/money/pkg/ifood"
 	"github.com/angelokurtis/money/pkg/nuconta"
 	"github.com/angelokurtis/money/pkg/spreadsheet"
 	"github.com/google/wire"
@@ -34,6 +35,7 @@ func New() (*App, error) {
 		gmail.Providers,
 		gsheets.Providers,
 		http.Providers,
+		ifood.Providers,
 		nuconta.Providers,
 		spreadsheet.Providers,
 	)
